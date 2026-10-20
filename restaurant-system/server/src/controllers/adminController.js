@@ -5,18 +5,21 @@ import User from "../models/user.js";
 // Dummy bcrypt hash executed on missed email to prevent timing-based email enumeration
 const DUMMY_HASH = bcryptjs.hashSync("not-a-real-admin-password", 12);
 
+const isProduction = process.env.NODE_ENV === "production";
+const isDev = !isProduction;
+
 const cookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
   path: "/",
   maxAge: 8 * 60 * 60 * 1000, // 8 hours
 };
 
 const clearCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
   path: "/",
 };
 
@@ -31,16 +34,41 @@ export const adminLogin = async (req, res, next) => {
     }
 
     const user = await User.findOne({ email }).select("+passwordHash +password");
-    const userHash = user ? (user.passwordHash || user.password) : DUMMY_HASH;
+    if (!user) {
+      console.error(`[ADMIN LOGIN] Admin account not found for email: ${email}`);
+      return res.status(401).json({
+        message: isDev ? "Admin user not found with this email." : "Invalid email or password.",
+      });
+    }
+
+    const userHash = user.passwordHash || user.password;
     const passwordOk = await bcryptjs.compare(password, userHash);
 
-    if (!user || !passwordOk || user.isActive === false) {
-      return res.status(401).json({ message: "Invalid email or password." });
+    if (!passwordOk) {
+      console.error(`[ADMIN LOGIN] Password mismatch for admin: ${email}`);
+      return res.status(401).json({
+        message: isDev ? "Incorrect admin password." : "Invalid email or password.",
+      });
+    }
+
+    if (user.isActive === false) {
+      console.error(`[ADMIN LOGIN] Account is inactive/disabled: ${email}`);
+      return res.status(403).json({
+        message: isDev ? "Admin account is disabled." : "Account is disabled. Please contact support.",
+      });
     }
 
     if (user.role !== "admin") {
+      console.error(`[ADMIN LOGIN] User ${email} does not have admin role (current role: ${user.role})`);
       return res.status(403).json({
         message: `Your account (${user.role}) does not have admin permissions. Please sign in via the customer login on the main website.`,
+      });
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error("[ADMIN LOGIN] FATAL: JWT_SECRET environment variable is missing!");
+      return res.status(500).json({
+        message: isDev ? "Server configuration error: JWT_SECRET missing." : "Authentication service error.",
       });
     }
 
@@ -71,7 +99,10 @@ export const adminLogin = async (req, res, next) => {
       },
     });
   } catch (err) {
-    next(err);
+    console.error("[ADMIN LOGIN] Database error during admin login:", err.message);
+    return res.status(500).json({
+      message: isDev ? `DB error: ${err.message}` : "Internal server error. Please try again later.",
+    });
   }
 };
 

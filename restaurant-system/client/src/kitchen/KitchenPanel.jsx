@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { apiUrl } from "../config/api.js";
 import "./kitchen.css";
 
 function elapsedMinutes(createdAt) {
@@ -59,7 +60,7 @@ export default function KitchenPanel({ user, onLogout }) {
     async (silent = false) => {
       if (!silent) setLoading(true);
       try {
-        const res = await fetch("/api/panels/kitchen", {
+        const res = await fetch(apiUrl("/api/panels/kitchen"), {
           credentials: "include",
           headers: { "X-Requested-With": "XMLHttpRequest" },
         });
@@ -97,7 +98,7 @@ export default function KitchenPanel({ user, onLogout }) {
   const handleUpdateStatus = async (orderId, newStatus) => {
     setActionBusy((prev) => ({ ...prev, [orderId]: true }));
     try {
-      const res = await fetch(`/api/panels/kitchen/${orderId}/status`, {
+      const res = await fetch(apiUrl(`/api/panels/kitchen/${orderId}/status`), {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -125,7 +126,7 @@ export default function KitchenPanel({ user, onLogout }) {
     }
     setActionBusy((prev) => ({ ...prev, [rejectOrder._id]: true }));
     try {
-      const res = await fetch(`/api/panels/kitchen/${rejectOrder._id}/reject`, {
+      const res = await fetch(apiUrl(`/api/panels/kitchen/${rejectOrder._id}/reject`), {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -151,7 +152,7 @@ export default function KitchenPanel({ user, onLogout }) {
   const handleOpen86Modal = async () => {
     setShow86Modal(true);
     try {
-      const res = await fetch("/api/panels/kitchen/products", {
+      const res = await fetch(apiUrl("/api/panels/kitchen/products"), {
         credentials: "include",
         headers: { "X-Requested-With": "XMLHttpRequest" },
       });
@@ -165,7 +166,7 @@ export default function KitchenPanel({ user, onLogout }) {
   // Toggle item 86 status
   const handleToggle86 = async (productId) => {
     try {
-      const res = await fetch(`/api/panels/kitchen/products/${productId}/toggle-86`, {
+      const res = await fetch(apiUrl(`/api/panels/kitchen/products/${productId}/toggle-86`), {
         method: "PATCH",
         credentials: "include",
         headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -185,7 +186,7 @@ export default function KitchenPanel({ user, onLogout }) {
   const handleOpenHistory = async () => {
     setShowHistoryModal(true);
     try {
-      const res = await fetch("/api/panels/kitchen/completed-today", {
+      const res = await fetch(apiUrl("/api/panels/kitchen/completed-today"), {
         credentials: "include",
         headers: { "X-Requested-With": "XMLHttpRequest" },
       });

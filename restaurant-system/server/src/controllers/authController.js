@@ -6,10 +6,11 @@ const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 // Helper: Set secure HttpOnly cookie for session token
 const setTokenCookie = (res, token) => {
+  const isProduction = process.env.NODE_ENV === "production";
   res.cookie("token", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 };
@@ -18,6 +19,7 @@ const setTokenCookie = (res, token) => {
 //  POST /api/auth/register (or /api/auth/signup)
 // ─────────────────────────────────────────────────────────────
 export const register = async (req, res) => {
+  const isDev = process.env.NODE_ENV !== "production";
   try {
     const { name, email, password, confirmPassword, confirm, phone } = req.body || {};
 
@@ -76,7 +78,16 @@ export const register = async (req, res) => {
     // 6. Check for duplicate email (using strict string primitive to avoid injection)
     const existing = await User.findOne({ email: String(normalizedEmail) });
     if (existing) {
+      console.error(`[AUTH SIGNUP] Duplicate registration attempt for email: ${normalizedEmail}`);
       return res.status(409).json({ message: "Email is already registered. Please sign in." });
+    }
+
+    // Check JWT_SECRET
+    if (!process.env.JWT_SECRET) {
+      console.error("[AUTH SIGNUP] FATAL: JWT_SECRET environment variable is missing!");
+      return res.status(500).json({
+        message: isDev ? "Server configuration error: JWT_SECRET missing." : "Signup service error.",
+      });
     }
 
     // 7. Hash password before storing — never store plain text
@@ -117,11 +128,14 @@ export const register = async (req, res) => {
     });
   } catch (err) {
     if (err.code === 11000) {
+      console.error(`[AUTH SIGNUP] Duplicate key error (11000) for email: ${req.body?.email}`);
       return res.status(409).json({ message: "Email is already registered. Please sign in." });
     }
 
-    console.error("Signup error:", err.message);
-    return res.status(500).json({ message: "Internal server error. Please try again later." });
+    console.error("[AUTH SIGNUP] Database/server error during signup:", err.message);
+    return res.status(500).json({
+      message: isDev ? `DB error: ${err.message}` : "Internal server error. Please try again later.",
+    });
   }
 };
 
@@ -129,6 +143,7 @@ export const register = async (req, res) => {
 //  POST /api/auth/login
 // ─────────────────────────────────────────────────────────────
 export const login = async (req, res) => {
+  const isDev = process.env.NODE_ENV !== "production";
   try {
     const { email, password } = req.body || {};
 
@@ -150,24 +165,51 @@ export const login = async (req, res) => {
     // 2. Fetch user with passwordHash/password using strict string filter
     const user = await User.findOne({ email: String(normalizedEmail) }).select("+passwordHash +password");
 
-    // 3. Generic safe check — never leak if email or password was the cause
-    if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: "Invalid email or password." });
+    if (!user) {
+      console.error(`[AUTH LOGIN] User not found for email: ${normalizedEmail}`);
+      return res.status(401).json({
+        message: isDev ? "User not found with this email." : "Invalid email or password.",
+      });
+    }
+
+    // 3. Compare password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      console.error(`[AUTH LOGIN] Password mismatch for email: ${normalizedEmail}`);
+      return res.status(401).json({
+        message: isDev ? "Incorrect password." : "Invalid email or password.",
+      });
+    }
+
+    // 4. Verify user status
+    if (user.isActive === false) {
+      console.error(`[AUTH LOGIN] Account is inactive/disabled: ${normalizedEmail}`);
+      return res.status(403).json({
+        message: isDev ? "Account is disabled." : "Account is disabled. Please contact administration.",
+      });
+    }
+
+    // 5. Verify JWT_SECRET
+    if (!process.env.JWT_SECRET) {
+      console.error("[AUTH LOGIN] FATAL: JWT_SECRET environment variable is missing!");
+      return res.status(500).json({
+        message: isDev ? "Server configuration error: JWT_SECRET missing." : "Authentication service error.",
+      });
     }
 
     const effectiveRole = user.role === "user" ? "customer" : user.role;
 
-    // 4. Generate JWT token
+    // 6. Generate JWT token
     const token = jwt.sign(
       { id: user._id, role: effectiveRole },
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
 
-    // 5. Set HttpOnly cookie
+    // 7. Set HttpOnly cookie
     setTokenCookie(res, token);
 
-    // 6. Return response without password or passwordHash
+    // 8. Return response without password or passwordHash
     return res.status(200).json({
       message: "Signed in successfully.",
       token,
@@ -181,8 +223,10 @@ export const login = async (req, res) => {
       },
     });
   } catch (err) {
-    console.error("Login error:", err.message);
-    return res.status(500).json({ message: "Internal server error. Please try again later." });
+    console.error("[AUTH LOGIN] Database error during login:", err.message);
+    return res.status(500).json({
+      message: isDev ? `DB error: ${err.message}` : "Internal server error. Please try again later.",
+    });
   }
 };
 
@@ -190,10 +234,11 @@ export const login = async (req, res) => {
 //  POST /api/auth/logout
 // ─────────────────────────────────────────────────────────────
 export const logout = (req, res) => {
+  const isProduction = process.env.NODE_ENV === "production";
   res.clearCookie("token", {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    secure: isProduction,
+    sameSite: isProduction ? "none" : "lax",
   });
   return res.status(200).json({ message: "Signed out successfully." });
 };

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { apiUrl } from "../config/api.js";
 import "./waiter.css";
 
 export default function WaiterPanel({ user, onLogout }) {
@@ -48,7 +49,7 @@ export default function WaiterPanel({ user, onLogout }) {
     async (silent = false) => {
       if (!silent) setLoading(true);
       try {
-        const res = await fetch("/api/panels/waiter", {
+        const res = await fetch(apiUrl("/api/panels/waiter"), {
           credentials: "include",
           headers: { "X-Requested-With": "XMLHttpRequest" },
         });
@@ -186,7 +187,7 @@ export default function WaiterPanel({ user, onLogout }) {
     if (!confirm(`Are you sure you want to remove "${item.name}" from the order?`)) return;
 
     try {
-      const res = await fetch(`/api/panels/waiter/order/${item.orderId}/item/${item.itemIndex}`, {
+      const res = await fetch(apiUrl(`/api/panels/waiter/order/${item.orderId}/item/${item.itemIndex}`), {
         method: "DELETE",
         credentials: "include",
         headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -219,7 +220,7 @@ export default function WaiterPanel({ user, onLogout }) {
 
       if (activeTable.activeOrder) {
         // Append items as new round:
-        const res = await fetch(`/api/panels/waiter/order/${activeTable.activeOrder._id}/add-items`, {
+        const res = await fetch(apiUrl(`/api/panels/waiter/order/${activeTable.activeOrder._id}/add-items`), {
           method: "POST",
           credentials: "include",
           headers: {
@@ -235,7 +236,7 @@ export default function WaiterPanel({ user, onLogout }) {
         if (!res.ok) throw new Error(data.message || "Failed to send additional round to kitchen.");
       } else {
         // Create brand new order for table:
-        const res = await fetch("/api/panels/waiter/order", {
+        const res = await fetch(apiUrl("/api/panels/waiter/order"), {
           method: "POST",
           credentials: "include",
           headers: {
@@ -267,7 +268,7 @@ export default function WaiterPanel({ user, onLogout }) {
   const handleMarkServed = async (orderId) => {
     setActionBusy((prev) => ({ ...prev, [orderId]: true }));
     try {
-      const res = await fetch(`/api/panels/waiter/${orderId}/complete`, {
+      const res = await fetch(apiUrl(`/api/panels/waiter/${orderId}/complete`), {
         method: "PATCH",
         credentials: "include",
         headers: {
@@ -291,7 +292,7 @@ export default function WaiterPanel({ user, onLogout }) {
     if (!confirm("Request bill for this table? Cashier will be notified to print invoice.")) return;
     setActionBusy((prev) => ({ ...prev, [orderId]: true }));
     try {
-      const res = await fetch(`/api/panels/waiter/order/${orderId}/bill-request`, {
+      const res = await fetch(apiUrl(`/api/panels/waiter/order/${orderId}/bill-request`), {
         method: "PATCH",
         credentials: "include",
         headers: {
