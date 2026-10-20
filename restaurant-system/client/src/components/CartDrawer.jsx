@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { apiUrl } from "../config/api.js";
 
 /**
  * CartDrawer.jsx — Full Slide-Out Cart Drawer & Checkout Modal
@@ -134,7 +135,7 @@ export default function CartDrawer({
     }
     setIsSubmitting(true);
     try {
-      const res = await fetch("/api/orders", {
+      const res = await fetch(apiUrl("/api/orders"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import connectDB from "./config/db.js";
 
 // Import all API routes
 import authRoutes from "./routes/authRoutes.js";
@@ -30,6 +31,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
   "http://localhost:5000",
+  "https://restaurant-app-eight-nu.vercel.app",
   process.env.FRONTEND_URL,
 ].filter(Boolean);
 
@@ -39,7 +41,7 @@ app.use(
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
-        callback(null, true); // Allow during local development
+        callback(null, true);
       }
     },
     credentials: true,
@@ -72,13 +74,28 @@ app.use((req, res, next) => {
   next();
 });
 
-// ── Health Check ─────────────────────────────────────────────
+// ── Root Test Route & Health Check ───────────────────────────
+app.get("/", (req, res) => {
+  res.status(200).send("API running");
+});
+
 app.get("/health", (req, res) => {
   res.status(200).json({
     status: "ok",
     message: "Restruent API is healthy",
     timestamp: new Date().toISOString(),
   });
+});
+
+// ── Database Connection Middleware (Serverless Cached) ───────
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error("❌ MongoDB connection error:", err.message);
+    res.status(500).json({ error: "Database connection failed", message: err.message });
+  }
 });
 
 // ── Mount All API Routes ─────────────────────────────────────

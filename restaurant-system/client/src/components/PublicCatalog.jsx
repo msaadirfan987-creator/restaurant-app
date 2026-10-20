@@ -15,8 +15,10 @@ const effectivePrice = (p) => (p.discountPrice != null ? p.discountPrice : p.pri
 const DEFAULT_BURGER_IMG =
   "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?auto=format&fit=crop&w=900&q=80";
 
+import { apiUrl } from "../config/api.js";
+
 async function getJson(url) {
-  const res = await fetch(url);
+  const res = await fetch(apiUrl(url));
   if (!res.ok) throw new Error("Could not load the menu. Please try again.");
   return res.json();
 }

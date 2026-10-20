@@ -15,6 +15,7 @@ import AdminApp from "./admin/AdminApp";
 import CashierApp from "./cashier/CashierApp";
 import KitchenPanel from "./kitchen/KitchenPanel";
 import WaiterPanel from "./waiter/WaiterPanel";
+import { apiUrl } from "./config/api.js";
 
 function StaffGuard({ title, requiredRoles, currentUser, onOpenLogin, onGoHome, children }) {
   if (!currentUser) {
@@ -115,7 +116,7 @@ export default function App() {
 
   // Synchronize active session with backend HttpOnly cookie on page load
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    fetch(apiUrl("/api/auth/me"), { credentials: "include" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {
@@ -186,7 +187,7 @@ export default function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/auth/logout", {
+      await fetch(apiUrl("/api/auth/logout"), {
         method: "POST",
         headers: {
           "X-Requested-With": "XMLHttpRequest",

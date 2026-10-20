@@ -37,8 +37,10 @@ const COLORS = {
 const ART =
   "https://images.unsplash.com/photo-1607013251379-e6eecfffe234?auto=format&fit=crop&w=1400&q=80";
 
+import { apiUrl } from "../config/api.js";
+
 async function post(url, body) {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

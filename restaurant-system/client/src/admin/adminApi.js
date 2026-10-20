@@ -2,6 +2,8 @@
 // Uses credentials: "include" so HttpOnly cookies are attached automatically.
 // Enforces CSRF defense header on all requests.
 
+import { apiUrl } from "../config/api.js";
+
 async function request(url, { method = "GET", body, isForm = false } = {}) {
   let res;
   try {
@@ -12,7 +14,7 @@ async function request(url, { method = "GET", body, isForm = false } = {}) {
       headers["Content-Type"] = "application/json";
     }
 
-    res = await fetch(url, {
+    res = await fetch(apiUrl(url), {
       method,
       credentials: "include",
       headers,
