@@ -1,0 +1,621 @@
+/* waiter.css — Professional Hospitality Waiter Tablet & Mobile Terminal
+   Palette: Sleek Midnight Navy (#0b132b / #1c2541), Crisp Slate (#3a506b),
+            Emerald (#10b981), Warm Amber (#f59e0b), Electric Violet (#8b5cf6),
+            Crimson (#ef4444), Off-White (#f8fafc)
+*/
+
+.waiter-root {
+  min-height: 100vh;
+  min-height: 100svh;
+  background: #0b132b;
+  color: #f8fafc;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.waiter-root *, .waiter-root *::before, .waiter-root *::after {
+  box-sizing: border-box;
+}
+
+/* Header */
+.waiter-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #111d3d;
+  border-bottom: 2px solid #3b82f6;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.waiter-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.waiter-badge {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: #ffffff;
+  font-weight: 900;
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+}
+
+.waiter-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #ffffff;
+}
+
+.waiter-sub {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.waiter-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.waiter-tab-btn {
+  background: #1c2541;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.waiter-tab-btn:hover {
+  background: #253358;
+  color: #ffffff;
+}
+
+.waiter-tab-btn.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+  box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+}
+
+.waiter-user-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1c2541;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.82rem;
+  color: #e2e8f0;
+}
+
+.waiter-avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #3b82f6;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+.waiter-btn-logout {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.waiter-btn-logout:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+/* Ready Orders Banner Alert */
+.waiter-alert-banner {
+  background: linear-gradient(90deg, #065f46, #047857);
+  border-bottom: 1px solid #10b981;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  animation: pulse-border 2s infinite ease-in-out;
+}
+
+@keyframes pulse-border {
+  0%, 100% { box-shadow: inset 0 0 10px rgba(16, 185, 129, 0.4); }
+  50% { box-shadow: inset 0 0 20px rgba(16, 185, 129, 0.8); }
+}
+
+.waiter-alert-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #ffffff;
+}
+
+/* Main Container */
+.waiter-content {
+  flex: 1;
+  padding: 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Tables Grid */
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.table-card {
+  background: #16203b;
+  border-radius: 12px;
+  border: 2px solid #233157;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 190px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.table-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Status variants */
+.table-card.status-free {
+  border-color: #10b981;
+  background: linear-gradient(180deg, rgba(16, 185, 129, 0.08) 0%, #16203b 100%);
+}
+
+.table-card.status-occupied {
+  border-color: #f59e0b;
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.08) 0%, #16203b 100%);
+}
+
+.table-card.status-food_ready {
+  border-color: #06b6d4;
+  background: linear-gradient(180deg, rgba(6, 182, 212, 0.15) 0%, #16203b 100%);
+  animation: glow-ready 1.8s infinite alternate;
+}
+
+@keyframes glow-ready {
+  from { box-shadow: 0 0 10px rgba(6, 182, 212, 0.3); }
+  to { box-shadow: 0 0 25px rgba(6, 182, 212, 0.7); }
+}
+
+.table-card.status-bill_requested {
+  border-color: #8b5cf6;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.15) 0%, #16203b 100%);
+  animation: glow-bill 1.8s infinite alternate;
+}
+
+@keyframes glow-bill {
+  from { box-shadow: 0 0 10px rgba(139, 92, 246, 0.3); }
+  to { box-shadow: 0 0 25px rgba(139, 92, 246, 0.7); }
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.table-num {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.table-seats {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  background: #0f172a;
+  padding: 3px 8px;
+  border-radius: 12px;
+}
+
+.table-badge-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+}
+
+.badge-free { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+.badge-occupied { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.badge-ready { background: rgba(6, 182, 212, 0.2); color: #38bdf8; }
+.badge-bill { background: rgba(139, 92, 246, 0.2); color: #c084fc; }
+
+.table-order-info {
+  margin: 10px 0;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  border-radius: 6px;
+}
+
+.table-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.btn-table-action {
+  flex: 1;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.btn-table-order { background: #3b82f6; color: #ffffff; }
+.btn-table-order:hover { background: #2563eb; }
+
+.btn-table-serve { background: #10b981; color: #ffffff; }
+.btn-table-serve:hover { background: #059669; }
+
+.btn-table-bill { background: #8b5cf6; color: #ffffff; }
+.btn-table-bill:hover { background: #7c3aed; }
+
+/* Modal Order Sheet / Dialog */
+.waiter-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.waiter-modal-box {
+  background: #111d3d;
+  border: 1px solid #2d3e69;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 960px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+.waiter-modal-header {
+  padding: 16px 20px;
+  background: #16254c;
+  border-bottom: 1px solid #2d3e69;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.waiter-modal-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.waiter-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.waiter-modal-body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  flex: 1;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .waiter-modal-body {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+}
+
+/* Menu catalog side */
+.waiter-catalog-side {
+  padding: 16px;
+  overflow-y: auto;
+  border-right: 1px solid #233157;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.waiter-search-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.waiter-search-input {
+  flex: 1;
+  background: #0b132b;
+  border: 1px solid #2d3e69;
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.waiter-search-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.waiter-categories {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.waiter-cat-pill {
+  background: #1c2541;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.waiter-cat-pill.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: #ffffff;
+}
+
+.waiter-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.waiter-item-card {
+  background: #16203b;
+  border: 1px solid #233157;
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.waiter-item-card:hover {
+  border-color: #3b82f6;
+  background: #1e2c52;
+}
+
+.waiter-item-name {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #ffffff;
+}
+
+.waiter-item-price {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #38bdf8;
+  margin-top: 6px;
+}
+
+/* Order Cart side */
+.waiter-cart-side {
+  padding: 16px;
+  background: #0f172a;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow-y: auto;
+}
+
+.cart-section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.guest-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  background: #1e293b;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+.cart-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+.cart-item-row {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cart-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cart-item-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.cart-qty-ctrls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cart-qty-btn {
+  width: 24px;
+  height: 24px;
+  background: #334155;
+  border: none;
+  border-radius: 4px;
+  color: #ffffff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.cart-item-note-input {
+  width: 100%;
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  font-size: 0.75rem;
+  padding: 5px 8px;
+  border-radius: 4px;
+}
+
+.cart-item-note-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.cart-footer {
+  border-top: 1px solid #334155;
+  padding-top: 12px;
+}
+
+.cart-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 12px;
+}
+
+.btn-send-kitchen {
+  width: 100%;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-send-kitchen:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.btn-send-kitchen:disabled {
+  background: #475569;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Round Badge */
+.round-badge {
+  background: #3b82f6;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.round-badge.new {
+  background: #10b981;
+}
+
+/* Empty State */
+.waiter-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 0.95rem;
+}

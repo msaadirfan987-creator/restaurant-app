@@ -22,6 +22,8 @@ const itemSchema = new mongoose.Schema(
     quantity: { type: Number, default: 1, min: 1 },
     qty: { type: Number, default: 1, min: 1 },
     image: { type: String, default: "" },
+    notes: { type: String, default: "" },
+    round: { type: Number, default: 1 },
   },
   { _id: false }
 );
@@ -40,6 +42,9 @@ const orderSchema = new mongoose.Schema(
     source: { type: String, enum: ["online", "pos"], default: "online" },
     type: { type: String, enum: ORDER_TYPES, default: "delivery" },
     table: { type: mongoose.Schema.Types.ObjectId, ref: "Table" },
+    guestCount: { type: Number, default: 1, min: 1 },
+    billRequested: { type: Boolean, default: false },
+    billRequestedAt: { type: Date },
 
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
 

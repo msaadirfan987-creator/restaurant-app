@@ -6,6 +6,8 @@ import path from "path";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Load from server root .env
 dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../../restaurant-system/server/.env") });
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGODB_URI;
 if (!MONGO_URI) {

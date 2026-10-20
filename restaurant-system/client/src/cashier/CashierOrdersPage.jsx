@@ -316,6 +316,24 @@ export default function CashierOrdersPage({
                             Table {tableNumber}
                           </div>
                         )}
+                        {o.billRequested && (
+                          <span
+                            style={{
+                              display: "inline-block",
+                              marginTop: "4px",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontSize: "0.68rem",
+                              fontWeight: 800,
+                              background: "rgba(139, 92, 246, 0.25)",
+                              color: "#c084fc",
+                              border: "1px solid #8b5cf6",
+                              letterSpacing: "0.5px",
+                            }}
+                          >
+                            BILL REQUESTED
+                          </span>
+                        )}
                       </td>
                       <td style={{ padding: "12px 14px", color: "#f4ead5" }}>
                         <div style={{ fontWeight: 600 }}>{o.customer?.name || "Guest"}</div>

@@ -8,15 +8,32 @@ function elapsedMinutes(createdAt) {
 }
 
 export default function KitchenPanel({ user, onLogout }) {
-  const [orders, setOrders] = useState([]);
+  const [newOrders, setNewOrders] = useState([]);
+  const [preparingOrders, setPreparingOrders] = useState([]);
+  const [readyOrders, setReadyOrders] = useState([]);
+  const [completedCount, setCompletedCount] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [actionBusy, setActionBusy] = useState({});
-  const [filter, setFilter] = useState("all"); // "all" | "pending" | "preparing" | "dine-in" | "online"
+  const [filterType, setFilterType] = useState("all"); // "all" | "dine-in" | "takeaway" | "online"
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const prevCount = useRef(0);
 
+  // Modals
+  const [show86Modal, setShow86Modal] = useState(false);
+  const [productsList, setProductsList] = useState([]);
+  const [search86, setSearch86] = useState("");
+
+  const [rejectOrder, setRejectOrder] = useState(null); // Order to reject
+  const [rejectReason, setRejectReason] = useState("");
+
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [completedOrders, setCompletedOrders] = useState([]);
+
+  const prevNewCount = useRef(0);
+
+  // Audio chime
   const playChime = useCallback(() => {
     if (!soundEnabled) return;
     try {
@@ -27,15 +44,16 @@ export default function KitchenPanel({ user, onLogout }) {
       gain.connect(ctx.destination);
       osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
       osc.frequency.setValueAtTime(880.0, ctx.currentTime + 0.15); // A5
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
       osc.start();
-      osc.stop(ctx.currentTime + 0.5);
+      osc.stop(ctx.currentTime + 0.55);
     } catch {
-      // Audio autoplay restrictions, harmless
+      // Audio autoplay policy
     }
   }, [soundEnabled]);
 
+  // Fetch live KOT queue
   const fetchKitchenOrders = useCallback(
     async (silent = false) => {
       if (!silent) setLoading(true);
@@ -47,15 +65,18 @@ export default function KitchenPanel({ user, onLogout }) {
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to load kitchen queue.");
 
-        const fetchedOrders = data.orders || [];
-        setOrders(fetchedOrders);
+        const fetchedNew = data.newOrders || [];
+        setNewOrders(fetchedNew);
+        setPreparingOrders(data.preparingOrders || []);
+        setReadyOrders(data.readyOrders || []);
+        setCompletedCount(data.completedTodayCount || 0);
         setError("");
 
-        // If new order arrived, chime
-        if (silent && fetchedOrders.length > prevCount.current) {
+        // Check if brand new order arrived
+        if (silent && fetchedNew.length > prevNewCount.current) {
           playChime();
         }
-        prevCount.current = fetchedOrders.length;
+        prevNewCount.current = fetchedNew.length;
       } catch (err) {
         if (!silent) setError(err.message || "Could not connect to kitchen service.");
       } finally {
@@ -71,7 +92,8 @@ export default function KitchenPanel({ user, onLogout }) {
     return () => clearInterval(interval);
   }, [fetchKitchenOrders]);
 
-  const updateOrderStatus = async (orderId, newStatus) => {
+  // Update order status (bidirectional)
+  const handleUpdateStatus = async (orderId, newStatus) => {
     setActionBusy((prev) => ({ ...prev, [orderId]: true }));
     try {
       const res = await fetch(`/api/panels/kitchen/${orderId}/status`, {
@@ -84,9 +106,8 @@ export default function KitchenPanel({ user, onLogout }) {
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to update order status.");
+      if (!res.ok) throw new Error(data.message || "Failed to update status.");
 
-      // Refresh queue
       await fetchKitchenOrders(true);
     } catch (err) {
       alert(err.message || "Could not update status.");
@@ -95,6 +116,86 @@ export default function KitchenPanel({ user, onLogout }) {
     }
   };
 
+  // Reject / Cannot prepare order
+  const handleRejectOrder = async () => {
+    if (!rejectOrder || !rejectReason.trim()) {
+      alert("Please enter a reason for rejecting this order.");
+      return;
+    }
+    setActionBusy((prev) => ({ ...prev, [rejectOrder._id]: true }));
+    try {
+      const res = await fetch(`/api/panels/kitchen/${rejectOrder._id}/reject`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: JSON.stringify({ reason: rejectReason }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to reject order.");
+
+      setRejectOrder(null);
+      setRejectReason("");
+      await fetchKitchenOrders(true);
+    } catch (err) {
+      alert(err.message || "Could not reject order.");
+    } finally {
+      setActionBusy((prev) => ({ ...prev, [rejectOrder?._id]: false }));
+    }
+  };
+
+  // Open 86 Item Modal
+  const handleOpen86Modal = async () => {
+    setShow86Modal(true);
+    try {
+      const res = await fetch("/api/panels/kitchen/products", {
+        credentials: "include",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      const data = await res.json();
+      if (res.ok && data.products) setProductsList(data.products);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Toggle item 86 status
+  const handleToggle86 = async (productId) => {
+    try {
+      const res = await fetch(`/api/panels/kitchen/products/${productId}/toggle-86`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setProductsList((prev) =>
+          prev.map((p) => (p.id === productId || p._id === productId ? data.product : p))
+        );
+      }
+    } catch (err) {
+      alert(err.message || "Could not toggle product availability.");
+    }
+  };
+
+  // Open completed history modal
+  const handleOpenHistory = async () => {
+    setShowHistoryModal(true);
+    try {
+      const res = await fetch("/api/panels/kitchen/completed-today", {
+        credentials: "include",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+      });
+      const data = await res.json();
+      if (res.ok && data.orders) setCompletedOrders(data.orders);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Fullscreen toggle
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().then(() => setIsFullscreen(true)).catch(() => {});
@@ -103,312 +204,473 @@ export default function KitchenPanel({ user, onLogout }) {
     }
   };
 
-  const handleLogout = async () => {
-    if (onLogout) {
-      await onLogout();
-    } else {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        credentials: "include",
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-      });
-      window.location.href = "/";
-    }
+  // Filter orders by order type (dine-in, takeaway, online)
+  const filterList = (list) => {
+    if (filterType === "all") return list;
+    if (filterType === "online") return list.filter((o) => o.source === "online" || o.type === "delivery");
+    if (filterType === "dine-in") return list.filter((o) => o.type === "dine-in");
+    if (filterType === "takeaway") return list.filter((o) => o.type === "takeaway");
+    return list;
   };
 
-  // Filter orders
-  const filteredOrders = orders.filter((o) => {
-    if (filter === "pending") return o.status === "pending";
-    if (filter === "preparing") return o.status === "preparing";
-    if (filter === "dine-in") return o.type === "dine-in";
-    if (filter === "online") return o.source === "online" || o.type === "delivery" || o.type === "takeaway";
-    return true;
-  });
+  const filteredNew = filterList(newOrders);
+  const filteredPreparing = filterList(preparingOrders);
+  const filteredReady = filterList(readyOrders);
 
-  const pendingCount = orders.filter((o) => o.status === "pending").length;
-  const preparingCount = orders.filter((o) => o.status === "preparing").length;
+  // Render Single Order Card
+  const renderCard = (ord, columnKey) => {
+    const mins = elapsedMinutes(ord.createdAt);
+    const timerClass = mins >= 20 ? "timer-red" : mins >= 10 ? "timer-yellow" : "timer-normal";
+    const timerBadgeClass = mins >= 20 ? "timer-badge-red" : mins >= 10 ? "timer-badge-yellow" : "timer-badge-normal";
+
+    const isDineIn = ord.type === "dine-in";
+    const isOnline = ord.source === "online" || ord.type === "delivery";
+    const isTakeaway = ord.type === "takeaway";
+
+    return (
+      <div key={ord._id} className={`kds-card ${timerClass}`}>
+        <div className="kds-card-head">
+          <div>
+            <div className="kds-order-number">{ord.orderId}</div>
+            <div className="kds-meta-chips">
+              {isDineIn && (
+                <span className="kds-chip kds-chip-table">
+                  Table {ord.table?.number || "?"}
+                </span>
+              )}
+              {isOnline && <span className="kds-chip kds-chip-online">Online</span>}
+              {isTakeaway && <span className="kds-chip kds-chip-takeaway">Takeaway</span>}
+              {ord.guestCount > 1 && (
+                <span className="kds-chip" style={{ background: "#334155", color: "#fff" }}>
+                  {ord.guestCount} Guests
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className={`kds-timer-badge ${timerBadgeClass}`}>
+            <span>{mins}m ago</span>
+          </div>
+        </div>
+
+        {/* Instructions / Allergies */}
+        {(ord.instructions || ord.customer?.notes) && (
+          <div className="kds-order-instructions">
+            <strong>Note:</strong> {ord.instructions || ord.customer?.notes}
+          </div>
+        )}
+
+        {/* Items List */}
+        <div className="kds-items-list">
+          {(ord.items || []).map((it, idx) => (
+            <div key={`${it.id}-${idx}`} className="kds-item-row">
+              <div className="kds-item-main">
+                <span className="kds-item-qty">{it.quantity || it.qty}x</span>
+                <span className="kds-item-name">{it.name}</span>
+                {it.round && it.round > 1 && (
+                  <span className="kds-item-round">Round {it.round}</span>
+                )}
+              </div>
+              {it.notes && <div className="kds-item-note">Note: {it.notes}</div>}
+            </div>
+          ))}
+        </div>
+
+        {/* Card Actions */}
+        <div className="kds-card-actions">
+          {columnKey === "new" && (
+            <>
+              <button
+                type="button"
+                className="kds-action-btn btn-start-prep"
+                disabled={actionBusy[ord._id]}
+                onClick={() => handleUpdateStatus(ord._id, "preparing")}
+              >
+                {actionBusy[ord._id] ? "Updating..." : "Start Preparing"}
+              </button>
+              <button
+                type="button"
+                className="kds-action-btn btn-reject"
+                title="Cannot prepare / Cancel"
+                disabled={actionBusy[ord._id]}
+                onClick={() => setRejectOrder(ord)}
+              >
+                Reject
+              </button>
+            </>
+          )}
+
+          {columnKey === "preparing" && (
+            <>
+              <button
+                type="button"
+                className="kds-action-btn btn-undo"
+                title="Undo back to New"
+                disabled={actionBusy[ord._id]}
+                onClick={() => handleUpdateStatus(ord._id, "pending")}
+              >
+                &larr; Back
+              </button>
+              <button
+                type="button"
+                className="kds-action-btn btn-mark-ready"
+                disabled={actionBusy[ord._id]}
+                onClick={() => handleUpdateStatus(ord._id, "ready")}
+              >
+                {actionBusy[ord._id] ? "Updating..." : "Mark Ready"}
+              </button>
+            </>
+          )}
+
+          {columnKey === "ready" && (
+            <>
+              <button
+                type="button"
+                className="kds-action-btn btn-undo"
+                title="Undo back to Preparing"
+                disabled={actionBusy[ord._id]}
+                onClick={() => handleUpdateStatus(ord._id, "preparing")}
+              >
+                &larr; Prep
+              </button>
+              <div
+                style={{
+                  flex: 1,
+                  textAlign: "center",
+                  padding: "10px",
+                  background: "rgba(16, 185, 129, 0.15)",
+                  color: "#34d399",
+                  fontWeight: 800,
+                  fontSize: "0.85rem",
+                  borderRadius: "6px",
+                }}
+              >
+                Ready for Waiter Pickup
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="kds-root">
-      {/* Top Header */}
+    <div className={`kds-root ${isFullscreen ? "is-fullscreen" : ""}`}>
+      {/* KDS Header */}
       <header className="kds-header">
         <div className="kds-brand">
-          <span className="kds-badge">KDS</span>
+          <span className="kds-badge">KDS &middot; KITCHEN</span>
           <div>
-            <h1 className="kds-title">KITCHEN DISPLAY SYSTEM</h1>
+            <h1 className="kds-title">Kitchen Live Display</h1>
             <div className="kds-subtitle">
-              Active Queue: <strong style={{ color: "#d9a441" }}>{orders.length}</strong> (
-              <span style={{ color: "#fcd34d" }}>{pendingCount} New</span> ·{" "}
-              <span style={{ color: "#60a5fa" }}>{preparingCount} Cooking</span>) · Auto-sync 6s
+              New: {newOrders.length} &middot; Preparing: {preparingOrders.length} &middot; Ready:{" "}
+              {readyOrders.length}
             </div>
           </div>
         </div>
 
-        <div className="kds-actions">
+        <div className="kds-header-actions">
+          {/* Sound Toggle */}
+          <button
+            type="button"
+            className={`kds-btn ${soundEnabled ? "active" : ""}`}
+            onClick={() => setSoundEnabled((v) => !v)}
+          >
+            Sound: {soundEnabled ? "ON" : "OFF"}
+          </button>
+
+          {/* Fullscreen Toggle */}
+          <button type="button" className="kds-btn" onClick={toggleFullscreen}>
+            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          </button>
+
+          {/* 86 Stock Manager */}
+          <button type="button" className="kds-btn kds-btn-86" onClick={handleOpen86Modal}>
+            Item Khatam (86)
+          </button>
+
+          {/* Completed History */}
+          <button type="button" className="kds-btn" onClick={handleOpenHistory}>
+            Today's Completed ({completedCount})
+          </button>
+
+          {/* Logout */}
           <button
             type="button"
             className="kds-btn"
-            onClick={() => setSoundEnabled((s) => !s)}
-            title={soundEnabled ? "Mute audio alert" : "Enable order chime"}
+            style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5" }}
+            onClick={onLogout}
           >
-            {soundEnabled ? "Sound: ON" : "Sound: OFF"}
-          </button>
-
-          <button
-            type="button"
-            className="kds-btn"
-            onClick={toggleFullscreen}
-            title="Toggle Fullscreen for Kitchen Monitor"
-          >
-            {isFullscreen ? "Exit Fullscreen" : "Fullscreen KDS"}
-          </button>
-
-          <button
-            type="button"
-            className="kds-btn"
-            onClick={() => fetchKitchenOrders(false)}
-          >
-            Refresh
-          </button>
-
-          <div style={{ fontSize: "0.82rem", color: "rgba(244, 234, 213, 0.8)", padding: "0 6px" }}>
-            Chef: <strong style={{ color: "#d9a441" }}>{user?.name || "Kitchen Chef"}</strong>
-          </div>
-
-          <button
-            type="button"
-            className="kds-btn kds-btn-logout"
-            onClick={handleLogout}
-          >
-            Sign Out
+            Logout
           </button>
         </div>
       </header>
 
-      {/* Filter Tabs Bar */}
-      <nav className="kds-filter-bar" aria-label="Kitchen queue filters">
-        <button
-          type="button"
-          className={`kds-filter-pill ${filter === "all" ? "active" : ""}`}
-          onClick={() => setFilter("all")}
-        >
-          All Tickets ({orders.length})
-        </button>
-        <button
-          type="button"
-          className={`kds-filter-pill ${filter === "pending" ? "active" : ""}`}
-          onClick={() => setFilter("pending")}
-        >
-          New / Pending ({pendingCount})
-        </button>
-        <button
-          type="button"
-          className={`kds-filter-pill ${filter === "preparing" ? "active" : ""}`}
-          onClick={() => setFilter("preparing")}
-        >
-          In Prep / Cooking ({preparingCount})
-        </button>
-        <button
-          type="button"
-          className={`kds-filter-pill ${filter === "dine-in" ? "active" : ""}`}
-          onClick={() => setFilter("dine-in")}
-        >
-          Dine-In Tables
-        </button>
-        <button
-          type="button"
-          className={`kds-filter-pill ${filter === "online" ? "active" : ""}`}
-          onClick={() => setFilter("online")}
-        >
-          Website &amp; Takeaway
-        </button>
-      </nav>
-
-      {/* Main Tickets Screen */}
-      <main className="kds-main">
-        {loading && orders.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "80px 0", color: "#d9a441", fontSize: "1.1rem" }}>
-            Connecting to Live Kitchen Stream...
-          </div>
-        ) : error && orders.length === 0 ? (
-          <div
-            style={{
-              background: "rgba(239, 68, 68, 0.15)",
-              border: "1px solid #ef4444",
-              borderRadius: "10px",
-              padding: "24px",
-              color: "#fca5a5",
-              textAlign: "center",
-              maxWidth: "600px",
-              margin: "40px auto",
-            }}
+      {/* Filter Bar */}
+      <div className="kds-filter-bar">
+        <div className="kds-filter-group">
+          <button
+            type="button"
+            className={`kds-filter-btn ${filterType === "all" ? "active" : ""}`}
+            onClick={() => setFilterType("all")}
           >
-            {error}{" "}
-            <button
-              type="button"
-              onClick={() => fetchKitchenOrders(false)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#f4ead5",
-                textDecoration: "underline",
-                cursor: "pointer",
-                fontWeight: "bold",
-                marginLeft: "8px",
-              }}
-            >
-              Retry Connection
-            </button>
-          </div>
-        ) : filteredOrders.length === 0 ? (
-          <div
-            style={{
-              background: "#151a17",
-              border: "1px dashed rgba(217, 164, 65, 0.35)",
-              borderRadius: "14px",
-              padding: "70px 20px",
-              textAlign: "center",
-              marginTop: "40px",
-              maxWidth: "600px",
-              margin: "40px auto",
-            }}
+            All Orders ({newOrders.length + preparingOrders.length + readyOrders.length})
+          </button>
+          <button
+            type="button"
+            className={`kds-filter-btn ${filterType === "dine-in" ? "active" : ""}`}
+            onClick={() => setFilterType("dine-in")}
           >
-            <div style={{ width: "68px", height: "68px", margin: "0 auto 16px", borderRadius: "50%", overflow: "hidden", border: "2px solid #d9a441" }}>
-              <img
-                src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=200&q=80"
-                alt="Kitchen"
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
-              />
-            </div>
-            <h2
-              style={{
-                margin: "0 0 8px",
-                fontFamily: "'Bebas Neue', sans-serif",
-                fontSize: "1.8rem",
-                letterSpacing: "1px",
-                color: "#f4ead5",
-              }}
-            >
-              {filter === "all" ? "KITCHEN QUEUE CLEAR!" : "NO ORDERS IN THIS VIEW"}
-            </h2>
-            <p style={{ margin: 0, color: "rgba(244, 234, 213, 0.65)", fontSize: "0.95rem" }}>
-              {filter === "all"
-                ? "All customer orders have been cooked. Incoming orders will arrive here automatically."
-                : "Switch to 'All Tickets' tab above to view other active orders."}
-            </p>
+            Dine-In
+          </button>
+          <button
+            type="button"
+            className={`kds-filter-btn ${filterType === "takeaway" ? "active" : ""}`}
+            onClick={() => setFilterType("takeaway")}
+          >
+            Takeaway
+          </button>
+          <button
+            type="button"
+            className={`kds-filter-btn ${filterType === "online" ? "active" : ""}`}
+            onClick={() => setFilterType("online")}
+          >
+            Online / Delivery
+          </button>
+        </div>
+
+        <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+          Chef: <strong>{user?.name || "Kitchen Staff"}</strong> &middot; Timer:{" "}
+          <span style={{ color: "#f59e0b" }}>&gt;10m Yellow</span> &middot;{" "}
+          <span style={{ color: "#ef4444" }}>&gt;20m Urgent Red</span>
+        </div>
+      </div>
+
+      {/* Error state */}
+      {error && (
+        <div style={{ padding: "12px 24px", background: "#ef4444", color: "#fff", fontWeight: 700 }}>
+          {error}
+        </div>
+      )}
+
+      {/* 3 Columns Queue Layout */}
+      <main className="kds-columns-grid">
+        {/* Column 1: NEW ORDERS */}
+        <section className="kds-column col-new">
+          <div className="kds-column-header">
+            <span className="kds-column-title" style={{ color: "#38bdf8" }}>
+              1. NEW ORDERS
+            </span>
+            <span className="kds-column-count">{filteredNew.length}</span>
           </div>
-        ) : (
-          <div className="kds-grid">
-            {filteredOrders.map((o) => {
-              const mins = elapsedMinutes(o.createdAt);
-              const isUrgent = mins >= 15;
-              const isPreparing = o.status === "preparing";
-              const tableNum = o.table?.number || o.table?.tableNumber;
-              const busy = actionBusy[o._id];
-              const orderIdStr = o.orderNumber || (o._id ? o._id.slice(-5).toUpperCase() : "100");
-
-              return (
-                <article
-                  key={o._id}
-                  className={`kds-card ${isPreparing ? "preparing" : ""} ${isUrgent ? "urgent" : ""}`}
-                >
-                  {/* Card Top / Header */}
-                  <div className="kds-card-head">
-                    <div>
-                      <span className="kds-order-num">#{orderIdStr}</span>
-                      <span
-                        className={`kds-order-source ${
-                          o.source === "online" ? "kds-source-online" : "kds-source-pos"
-                        }`}
-                      >
-                        {o.source === "online" ? "Website" : o.type || "POS"}
-                      </span>
-                    </div>
-
-                    <div className="kds-timer">
-                      <span>{mins === 0 ? "Just now" : `${mins}m ago`}</span>
-                      {isUrgent && (
-                        <span
-                          style={{
-                            marginLeft: 4,
-                            background: "#ef4444",
-                            color: "#fff",
-                            padding: "1px 5px",
-                            borderRadius: "3px",
-                            fontSize: "0.68rem",
-                            fontWeight: 800,
-                          }}
-                        >
-                          URGENT
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Customer / Table Info */}
-                  <div className="kds-info-bar">
-                    <div>
-                      {tableNum ? (
-                        <span className="kds-table-badge">
-                          Table {tableNum}
-                          {o.table?.seats ? ` (${o.table.seats} Seats)` : ""}
-                        </span>
-                      ) : (
-                        <span style={{ color: "#f4ead5", fontWeight: 600 }}>
-                          {o.customer?.name || o.customerName || "Customer"}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ color: "rgba(244, 234, 213, 0.6)", textTransform: "capitalize" }}>
-                      {o.type || "Dine-In"}
-                    </div>
-                  </div>
-
-                  {/* Items List */}
-                  <div className="kds-items-list">
-                    {o.items?.map((it, idx) => (
-                      <div key={idx} className="kds-item-row">
-                        <span className="kds-item-name">{it.name}</span>
-                        <span className="kds-item-qty">&times; {it.quantity || it.qty || 1}</span>
-                      </div>
-                    ))}
-
-                    {/* Special Instructions */}
-                    {(o.instructions || o.notes) && (
-                      <div className="kds-instructions">
-                        <strong>Note:</strong> {o.instructions || o.notes}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="kds-card-actions">
-                    {o.status === "pending" ? (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => updateOrderStatus(o._id, "preparing")}
-                        className="kds-action-btn kds-btn-cook"
-                      >
-                        {busy ? "Updating..." : "Start Cooking / Preparing"}
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => updateOrderStatus(o._id, "ready")}
-                        className="kds-action-btn kds-btn-ready"
-                      >
-                        {busy ? "Updating..." : "Food Ready (Notify Staff)"}
-                      </button>
-                    )}
-                  </div>
-                </article>
-              );
-            })}
+          <div className="kds-cards-scroll">
+            {filteredNew.length === 0 ? (
+              <div className="kds-col-empty">No new orders waiting.</div>
+            ) : (
+              filteredNew.map((ord) => renderCard(ord, "new"))
+            )}
           </div>
-        )}
+        </section>
+
+        {/* Column 2: PREPARING */}
+        <section className="kds-column col-preparing">
+          <div className="kds-column-header">
+            <span className="kds-column-title" style={{ color: "#fbbf24" }}>
+              2. PREPARING
+            </span>
+            <span className="kds-column-count">{filteredPreparing.length}</span>
+          </div>
+          <div className="kds-cards-scroll">
+            {filteredPreparing.length === 0 ? (
+              <div className="kds-col-empty">No orders currently on grill/prep.</div>
+            ) : (
+              filteredPreparing.map((ord) => renderCard(ord, "preparing"))
+            )}
+          </div>
+        </section>
+
+        {/* Column 3: READY */}
+        <section className="kds-column col-ready">
+          <div className="kds-column-header">
+            <span className="kds-column-title" style={{ color: "#34d399" }}>
+              3. READY FOR PICKUP
+            </span>
+            <span className="kds-column-count">{filteredReady.length}</span>
+          </div>
+          <div className="kds-cards-scroll">
+            {filteredReady.length === 0 ? (
+              <div className="kds-col-empty">No orders waiting for pickup.</div>
+            ) : (
+              filteredReady.map((ord) => renderCard(ord, "ready"))
+            )}
+          </div>
+        </section>
       </main>
+
+      {/* MODAL: 86 ITEMS (ITEM KHATAM) */}
+      {show86Modal && (
+        <div className="kds-modal-overlay" onClick={() => setShow86Modal(false)}>
+          <div className="kds-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="kds-modal-header">
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>
+                Item Khatam (86) &mdash; Availability Manager
+              </h3>
+              <button
+                type="button"
+                className="waiter-modal-close"
+                onClick={() => setShow86Modal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="kds-modal-body">
+              <p style={{ margin: "0 0 12px", fontSize: "0.85rem", color: "#94a3b8" }}>
+                Agar koi item khatam ho gaya hai to yahan se <strong>86</strong> mark karein. Yeh
+                item foran website aur POS par unavailable ho jayega.
+              </p>
+
+              <input
+                type="text"
+                placeholder="Search menu items..."
+                className="waiter-search-input"
+                style={{ width: "100%", marginBottom: "16px" }}
+                value={search86}
+                onChange={(e) => setSearch86(e.target.value)}
+              />
+
+              <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+                {productsList
+                  .filter((p) => p.name.toLowerCase().includes(search86.toLowerCase()))
+                  .map((prod) => (
+                    <div key={prod.id || prod._id} className="kds-86-item">
+                      <div>
+                        <div style={{ fontWeight: 800, color: "#ffffff", fontSize: "0.95rem" }}>
+                          {prod.name}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                          Category: {prod.category?.name || "General"} &middot; Rs.{" "}
+                          {prod.price?.toLocaleString()}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className={`kds-toggle-btn ${prod.isAvailable !== false ? "toggle-avail" : "toggle-86"}`}
+                        onClick={() => handleToggle86(prod.id || prod._id)}
+                      >
+                        {prod.isAvailable !== false ? "AVAILABLE" : "86 / KHATAM"}
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: REJECT ORDER / CANNOT PREPARE */}
+      {rejectOrder && (
+        <div className="kds-modal-overlay" onClick={() => setRejectOrder(null)}>
+          <div className="kds-modal-box" style={{ maxWidth: "480px" }} onClick={(e) => e.stopPropagation()}>
+            <div className="kds-modal-header" style={{ background: "#7f1d1d" }}>
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#fecaca" }}>
+                Cannot Prepare: {rejectOrder.orderId}
+              </h3>
+              <button
+                type="button"
+                className="waiter-modal-close"
+                onClick={() => setRejectOrder(null)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="kds-modal-body">
+              <p style={{ margin: "0 0 10px", fontSize: "0.85rem", color: "#cbd5e1" }}>
+                Enter reason for rejection (this will be sent to Waiter & Cashier):
+              </p>
+              <textarea
+                rows={3}
+                className="waiter-search-input"
+                style={{ width: "100%", marginBottom: "14px", resize: "none" }}
+                placeholder="e.g. Out of beef patties, grill breakdown, customer allergen issue..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+              />
+
+              <div style={{ display: "flex", gap: "10px" }}>
+                <button
+                  type="button"
+                  className="kds-action-btn btn-undo"
+                  onClick={() => setRejectOrder(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="kds-action-btn btn-reject"
+                  disabled={actionBusy[rejectOrder._id]}
+                  onClick={handleRejectOrder}
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: COMPLETED ORDERS TODAY */}
+      {showHistoryModal && (
+        <div className="kds-modal-overlay" onClick={() => setShowHistoryModal(false)}>
+          <div className="kds-modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="kds-modal-header">
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800 }}>
+                Today's Completed Orders ({completedOrders.length})
+              </h3>
+              <button
+                type="button"
+                className="waiter-modal-close"
+                onClick={() => setShowHistoryModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="kds-modal-body">
+              {completedOrders.length === 0 ? (
+                <div className="kds-col-empty">No completed orders recorded today.</div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  {completedOrders.map((ord) => (
+                    <div
+                      key={ord._id}
+                      style={{
+                        background: "#1a2333",
+                        border: "1px solid #28354d",
+                        padding: "12px 16px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span style={{ fontWeight: 800, color: "#ffffff" }}>{ord.orderId}</span>
+                        <span style={{ fontSize: "0.78rem", color: "#34d399", fontWeight: 700 }}>
+                          SERVED & COMPLETED
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginTop: "4px" }}>
+                        Type: {ord.type} &middot; Table: {ord.table?.number || "N/A"} &middot; Items:{" "}
+                        {ord.items?.map((i) => `${i.quantity || i.qty}x ${i.name}`).join(", ")}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
