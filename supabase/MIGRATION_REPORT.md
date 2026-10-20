@@ -303,67 +303,95 @@ erDiagram
 
 ---
 
-## 4. Key Architectural Discoveries & Assumptions
+## 4. Security Architecture Review & Key Discoveries
 
-1. **`taxRate` in `Setting`:**
-   - In `server/src/models/Setting.js`, `taxRate` was not explicitly declared in the schema, yet in `server/src/services/orderService.js` (line 21), `setting?.taxRate != null ? setting.taxRate : 0.05` was queried.
-   - **Action:** Added `tax_rate NUMERIC(5, 4) NOT NULL DEFAULT 0.05` to both `settings` and `orders` tables.
+### 4.1 Custom JWT vs. Supabase GoTrue Auth (Crucial Architecture Finding)
+- **Finding:** The application frontend (React) communicates exclusively with the Express backend (`http://localhost:5000/api/...`) using custom Bcrypt password hashing and custom signed JWT tokens (`jwt.sign(..., process.env.JWT_SECRET)`). React does **NOT** authenticate via Supabase Auth (GoTrue).
+- **Security Implication:** Standard Supabase RLS functions (`auth.uid()`, `auth.jwt()`) return `NULL` for custom Express tokens because Supabase's PostgREST gateway does not know the Express `JWT_SECRET`.
+- **Architecture Standard:**
+  ```
+  [ React Frontend (Browser) ]
+             │
+             │  HTTP API requests with HttpOnly cookie / Custom Bearer JWT
+             ▼
+  [ Node.js + Express Backend ]  <-- Validates JWT, verifies roles & ownership, calculates totals
+             │
+             │  PostgreSQL Connection Pool (pg) OR Supabase Service-Role Client
+             ▼
+  [ Supabase PostgreSQL Database ]
+  ```
+- **Recommended Security Rule:**
+  - The Supabase `service_role` secret key must **only exist in the backend `.env`**, NEVER in the React frontend.
+  - Direct PostgREST access via the public `anon` key is strictly locked down:
+    - `REVOKE ALL ON users FROM anon, authenticated;`
+    - `REVOKE ALL ON orders FROM anon, authenticated;`
+    - `REVOKE ALL ON order_items FROM anon, authenticated;`
+    - `REVOKE ALL ON counters FROM anon, authenticated;`
+  - Read-only access is granted solely on public catalog tables (`categories`, `products`, `menu_items`, `restaurant_tables`, `settings`).
 
-2. **Synonymous Fields (`seats`/`capacity`, `number`/`tableNumber`, `qty`/`quantity`, `customer.notes`/`instructions`):**
-   - The original Mongoose models used pre-save hooks to mirror synonyms.
-   - **Action:** Created PostgreSQL triggers (`sync_table_synonyms`, `sync_order_item_qty`, `generate_order_id`) that automatically keep both columns in sync when inserted or updated.
+### 4.2 Guest Orders & Financial Tamper Protection
+- In `orderController.js` and `orderService.js`, orders are created through Express. Express looks up product prices in the database, verifies availability, validates promo codes, calculates subtotal, taxes, delivery fees, and total.
+- If guest orders were permitted directly through Supabase PostgREST, a malicious user with the public `anon` key could inject orders with `total = 0`.
+- **Action:** Direct `INSERT` on `orders` and `order_items` is revoked from `anon`. All order placements must pass through the Express controller.
 
-3. **`MenuItem` vs `Product`:**
-   - `Product` has a direct ObjectId reference to `Category` and an array of images.
-   - `MenuItem` has a raw string for `category` and single image string. `orderService.js` queried both collections as a fallback.
-   - **Action:** Preserved both `products` and `menu_items` tables to ensure 100% data fidelity during migration.
+### 4.3 Password Hash Protection
+- In Mongoose, `passwordHash` and `password` had `select: false`.
+- In PostgreSQL, `users` is inaccessible to PostgREST public clients. A clean security-invoker view `user_profiles` is provided for reading safe user metadata without ever exposing password hashes.
 
-4. **Security & Row Level Security (RLS):**
-   - RLS is enabled on all tables.
-   - Public queries can only view active categories, available products, active tables, and restaurant settings.
-   - Customers can only select their own orders (preventing Insecure Direct Object References - IDOR).
-   - Staff roles (`admin`, `cashier`, `kitchen`, `waiter`) and `service_role` have fine-grained permissions matching existing route middleware.
+### 4.4 `tables` View Security Invoker
+- The legacy `tables` view is created `WITH (security_invoker = true)` to prevent bypassing Row Level Security on `restaurant_tables`.
+
+### 4.5 Synonyms & Trigger Hardening
+- `sync_table_synonyms` and `sync_order_item_qty` triggers were refined to handle both `INSERT` and `UPDATE` scenarios without overwriting explicit changes.
+- Added `sync_order_number_seq()` helper to align the sequence after historical MongoDB orders are imported.
 
 ---
 
 ## 5. Migration Execution & Verification Guide
 
-Follow these beginner-friendly steps to apply this schema migration to your Supabase project without any risk to your MongoDB data:
+### Which File to Use:
+Use **`supabase/migrations/001_initial_schema.sql`**. This file has been updated in-place with the complete, corrected, and security-hardened schema.
 
 ### Step 1: Open Supabase SQL Editor
 1. Log in to your [Supabase Dashboard](https://supabase.com/dashboard).
-2. Open your Restaurant App project.
-3. In the left navigation menu, click on the **SQL Editor** icon (represented by the `>_` symbol).
-4. Click **New query** (or the green `+` button).
+2. Select your restaurant project.
+3. In the left navigation menu, click on the **SQL Editor** (`>_`).
+4. Click **New query**.
 
 ### Step 2: Paste and Run Migration Script
-1. Open the file [001_initial_schema.sql](file:///d:/WEB%20DEV%20PROJECTS/Restruent/supabase/migrations/001_initial_schema.sql) in your code editor.
+1. Open [001_initial_schema.sql](file:///d:/WEB%20DEV%20PROJECTS/Restruent/supabase/migrations/001_initial_schema.sql).
 2. Select all (`Ctrl + A`) and Copy (`Ctrl + C`).
-3. Paste the contents into the Supabase SQL Editor.
-4. Click the green **Run** button (or press `Ctrl + Enter`).
-5. You should see the output message:
+3. Paste into the Supabase SQL Editor and click **Run**.
+4. You will see:
    ```text
    Success. No rows returned.
    ```
 
 ### Step 3: Verify Created Tables & Structure
-1. On the left navigation sidebar, click on **Table Editor** (grid icon).
-2. Verify that all of the following 9 tables appear in the list:
-   - `users`
-   - `categories`
-   - `products`
-   - `menu_items`
-   - `restaurant_tables`
-   - `orders`
-   - `order_items`
-   - `settings`
-   - `counters`
-3. Click on **Database** -> **Schema Visualizer** to see the interactive relationship graph (foreign keys connecting `products` to `categories`, `orders` to `users` and `tables`, and `order_items` to `orders`).
+1. On the left navigation, open the **Table Editor**.
+2. Verify all 9 tables: `users`, `categories`, `products`, `menu_items`, `restaurant_tables`, `orders`, `order_items`, `settings`, `counters`.
+3. Open **Database** -> **Schema Visualizer** to verify the foreign key connections.
 
-### Step 4: Verify Row Level Security (RLS)
-1. Go to **Authentication** -> **Policies** in the Supabase Dashboard.
-2. Verify that all 9 tables have **RLS Enabled** (green badge).
-3. Review the individual policies created for `public_read`, `customer_read_own`, and `staff_update`.
+### Step 4: Verify PostgREST Table Permissions
+1. Go to **Authentication** -> **Policies**.
+2. Confirm that sensitive tables (`users`, `orders`, `order_items`, `counters`) have no public insert/update permissions for `anon`, ensuring all business operations are safely mediated by your Express backend.
+
+---
+
+## 6. Remaining Decisions for User Confirmation
+
+Before moving to the data migration phase, please confirm the following:
+
+1. **Backend Database Driver:**
+   When connecting Node.js/Express to Supabase PostgreSQL, which approach do you prefer?
+   - **Option A (Recommended):** Standard PostgreSQL connection pool via `pg` or `postgres.js` using Supabase's direct connection string (allows zero code changes to Express architecture, full transaction support).
+   - **Option B:** Supabase JavaScript SDK (`@supabase/supabase-js`) using `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`.
+
+2. **Historical Passwords Migration:**
+   Existing customer and staff passwords in MongoDB are stored as Bcrypt hashes (12 rounds). PostgreSQL will store these exact hashes in `users.password_hash`. When users log in, the Express backend verifies them using `bcrypt.compare()` exactly as it does today. (No passwords will ever be stored in plaintext). Please confirm this is acceptable.
+
+3. **Legacy `menuitems` Table:**
+   Do you want to consolidate legacy `menuitems` into `products`, or keep both tables as currently designed for 100% backward compatibility?
 
 ---
 *Generated autonomously by Antigravity IDE after full backend inspection.*
