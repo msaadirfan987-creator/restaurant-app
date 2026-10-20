@@ -2,18 +2,19 @@ import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
 import multer from "multer";
-
-const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
-
-// Ensure upload directory exists
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+import { uploadDir } from "../config/paths.js";
 
 // Multer storage with randomized UUID filename to prevent path traversal
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, UPLOAD_DIR);
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    } catch (err) {
+      cb(err, uploadDir);
+    }
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();

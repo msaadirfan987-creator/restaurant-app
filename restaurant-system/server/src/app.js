@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import connectDB from "./config/db.js";
+import { uploadDir } from "./config/paths.js";
 
 // Import all API routes
 import authRoutes from "./routes/authRoutes.js";
@@ -73,6 +74,9 @@ app.use((req, res, next) => {
   }
   next();
 });
+
+// Serve uploaded media statically from uploadDir (/tmp/uploads on Vercel)
+app.use("/uploads", express.static(uploadDir));
 
 // ── Root Test Route & Health Check ───────────────────────────
 app.get("/", (req, res) => {
