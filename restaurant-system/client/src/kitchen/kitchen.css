@@ -1,0 +1,359 @@
+/* kitchen.css — Kitchen Display System (KDS) Styling
+   Color Palette: Deep Noir (#0e1310 / #141a17), Amber Gold (#d9a441), Cream (#f4ead5), Crimson Urgent (#ef4444)
+*/
+
+.kds-root {
+  min-height: 100vh;
+  min-height: 100svh;
+  background: #0e1310;
+  color: #f4ead5;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.kds-root *, .kds-root *::before, .kds-root *::after {
+  box-sizing: border-box;
+}
+
+/* Header */
+.kds-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: #141a17;
+  border-bottom: 2px solid #d9a441;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.kds-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kds-badge {
+  background: linear-gradient(135deg, #d9a441, #b88338);
+  color: #101c1b;
+  font-weight: 900;
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 8px rgba(217, 164, 65, 0.3);
+}
+
+.kds-title {
+  margin: 0;
+  font-size: 1.4rem;
+  letter-spacing: 1px;
+  font-family: 'Bebas Neue', sans-serif;
+  color: #f4ead5;
+  line-height: 1.1;
+}
+
+.kds-subtitle {
+  font-size: 0.78rem;
+  color: rgba(244, 234, 213, 0.65);
+}
+
+.kds-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.kds-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1f2622;
+  border: 1px solid rgba(217, 164, 65, 0.3);
+  color: #f4ead5;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.kds-btn:hover {
+  background: rgba(217, 164, 65, 0.15);
+  border-color: #d9a441;
+  color: #d9a441;
+}
+
+.kds-btn-logout {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+.kds-btn-logout:hover {
+  background: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+/* Filter Bar */
+.kds-filter-bar {
+  background: #121814;
+  border-bottom: 1px solid rgba(217, 164, 65, 0.15);
+  padding: 10px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+}
+
+.kds-filter-pill {
+  background: transparent;
+  border: 1px solid rgba(244, 234, 213, 0.15);
+  color: rgba(244, 234, 213, 0.7);
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.kds-filter-pill:hover {
+  background: rgba(217, 164, 65, 0.1);
+  color: #f4ead5;
+  border-color: rgba(217, 164, 65, 0.3);
+}
+
+.kds-filter-pill.active {
+  background: #d9a441;
+  color: #101c1b;
+  border-color: #d9a441;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(217, 164, 65, 0.3);
+}
+
+/* Tickets Grid */
+.kds-main {
+  padding: 20px 24px;
+  flex: 1;
+  max-width: 1700px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.kds-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+/* Ticket Card */
+.kds-card {
+  background: #18201b;
+  border: 2px solid #d9a441;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kds-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.kds-card.preparing {
+  border-color: #3b82f6;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+}
+
+.kds-card.urgent {
+  border-color: #ef4444;
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.4);
+  animation: kds-pulse 1.8s infinite;
+}
+
+@keyframes kds-pulse {
+  0%, 100% { box-shadow: 0 0 14px rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 0 24px rgba(239, 68, 68, 0.65); }
+}
+
+/* Card Header */
+.kds-card-head {
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1d2520;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.kds-card.preparing .kds-card-head {
+  background: #1e3a8a;
+}
+
+.kds-card.urgent .kds-card-head {
+  background: #7f1d1d;
+}
+
+.kds-order-num {
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.kds-order-source {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.kds-source-online { background: #10b981; }
+.kds-source-pos { background: #8b5cf6; }
+
+.kds-timer {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #fcd34d;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kds-card.urgent .kds-timer {
+  color: #fca5a5;
+  font-weight: 800;
+}
+
+/* Customer & Table details */
+.kds-info-bar {
+  padding: 8px 14px;
+  background: #131a15;
+  border-bottom: 1px solid rgba(217, 164, 65, 0.12);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+}
+
+.kds-table-badge {
+  color: #d9a441;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+/* Items List */
+.kds-items-list {
+  padding: 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #161d19;
+}
+
+.kds-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #202a24;
+  padding: 9px 12px;
+  border-radius: 7px;
+  border: 1px solid rgba(244, 234, 213, 0.05);
+}
+
+.kds-item-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f4ead5;
+}
+
+.kds-item-qty {
+  background: #d9a441;
+  color: #101c1b;
+  padding: 3px 9px;
+  border-radius: 5px;
+  font-weight: 900;
+  font-size: 0.88rem;
+  min-width: 32px;
+  text-align: center;
+}
+
+/* Instructions / Notes */
+.kds-instructions {
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: rgba(217, 164, 65, 0.08);
+  border-left: 3px solid #d9a441;
+  font-size: 0.78rem;
+  color: #fcd34d;
+  font-style: italic;
+}
+
+/* Card Actions */
+.kds-card-actions {
+  padding: 12px 14px;
+  background: #131a15;
+  border-top: 1px solid rgba(217, 164, 65, 0.12);
+}
+
+.kds-action-btn {
+  width: 100%;
+  padding: 11px;
+  border: none;
+  border-radius: 7px;
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  letter-spacing: 0.5px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.kds-btn-cook {
+  background: #3b82f6;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.3);
+}
+
+.kds-btn-cook:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.kds-btn-ready {
+  background: #10b981;
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.3);
+}
+
+.kds-btn-ready:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.kds-action-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}

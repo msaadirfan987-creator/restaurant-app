@@ -43,3 +43,5 @@ coverage/
 # ── Misc ─────────────────────────────────────────────────────
 *.pem
 .cache/
+powershell.cmd
+powershell.bat
