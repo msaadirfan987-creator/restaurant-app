@@ -286,6 +286,12 @@ const css = `
   .ad-menu { display: inline-block; }
   .ad-top-logout, .ad-profile-text { display: none; }
 }
+@media (max-width: 540px) {
+  .ad-top { padding: 10px 14px; gap: 8px; }
+  .ad-page-title { font-size: 13px; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ad-content { padding: 14px 12px; }
+  .ad-avatar { width: 30px; height: 30px; font-size: 12px; }
+}
 @media (prefers-reduced-motion: reduce) {
   .ad-shell *, .ad-shell *::before, .ad-shell *::after { animation: none !important; transition: none !important; }
   .ad-link { opacity: 1; }

@@ -216,7 +216,7 @@ export default function CashierPOS() {
   };
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "20px", alignItems: "start" }}>
+    <div className="pos-layout-grid">
       {/* LEFT: Menu & Catalog */}
       <div>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: "12px", marginBottom: "16px" }}>

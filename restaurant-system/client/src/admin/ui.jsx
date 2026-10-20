@@ -101,6 +101,14 @@ export function UiStyles() {
       .ap-stat-title { font-size: 13px; font-weight: 600; color: rgba(244, 234, 213, 0.6); text-transform: uppercase; letter-spacing: 0.05em; }
       .ap-stat-value { font-size: 28px; font-weight: 800; color: #f4ead5; }
       .ap-stat-hint { font-size: 12px; color: #d9a441; }
+
+      @media (max-width: 600px) {
+        .ap-stat-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+        .ap-stat-card { padding: 14px; }
+        .ap-stat-value { font-size: 22px; }
+        .ap-table th, .ap-table td { padding: 10px 12px; font-size: 13px; }
+        .ap-tablewrap { -webkit-overflow-scrolling: touch; }
+      }
     `}</style>
   );
 }

@@ -20,6 +20,7 @@ export default function WaiterPanel({ user, onLogout }) {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [isSending, setIsSending] = useState(false);
   const [actionBusy, setActionBusy] = useState({});
+  const [modalTab, setModalTab] = useState("menu"); // "menu" | "cart" for mobile
 
   // Audio alert on food ready
   const prevReadyCount = useRef(0);
@@ -86,6 +87,7 @@ export default function WaiterPanel({ user, onLogout }) {
     setActiveTable(tbl);
     setSearchQuery("");
     setSelectedCategory("all");
+    setModalTab("menu");
 
     if (tbl.activeOrder) {
       // Existing order: load items
@@ -626,9 +628,27 @@ export default function WaiterPanel({ user, onLogout }) {
               </button>
             </div>
 
+            {/* Mobile Tab Switcher */}
+            <div className="waiter-modal-mobile-tabs">
+              <button
+                type="button"
+                className={`waiter-modal-tab-btn ${modalTab === "menu" ? "active" : ""}`}
+                onClick={() => setModalTab("menu")}
+              >
+                Browse Menu
+              </button>
+              <button
+                type="button"
+                className={`waiter-modal-tab-btn ${modalTab === "cart" ? "active" : ""}`}
+                onClick={() => setModalTab("cart")}
+              >
+                Order Ticket ({cartItems.length})
+              </button>
+            </div>
+
             <div className="waiter-modal-body">
               {/* Left Column: Menu Catalog & Search */}
-              <div className="waiter-catalog-side">
+              <div className={`waiter-catalog-side ${modalTab !== "menu" ? "hide-on-mobile" : ""}`}>
                 {/* Search */}
                 <div className="waiter-search-bar">
                   <input
@@ -679,10 +699,23 @@ export default function WaiterPanel({ user, onLogout }) {
                     </div>
                   )}
                 </div>
+
+                {cartItems.length > 0 && (
+                  <div style={{ marginTop: "12px" }}>
+                    <button
+                      type="button"
+                      className="btn-send-kitchen"
+                      style={{ padding: "10px", fontSize: "0.85rem", width: "100%" }}
+                      onClick={() => setModalTab("cart")}
+                    >
+                      View Ticket ({cartItems.length} items &middot; Rs. {cartSubtotal.toLocaleString()}) &rarr;
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Right Column: Ticket / Cart */}
-              <div className="waiter-cart-side">
+              <div className={`waiter-cart-side ${modalTab !== "cart" ? "hide-on-mobile" : ""}`}>
                 <div>
                   <div className="cart-section-title">
                     <span>Order Ticket</span>

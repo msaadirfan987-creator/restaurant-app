@@ -19,6 +19,7 @@ export default function KitchenPanel({ user, onLogout }) {
   const [filterType, setFilterType] = useState("all"); // "all" | "dine-in" | "takeaway" | "online"
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [mobileCol, setMobileCol] = useState("all"); // "all" | "new" | "preparing" | "ready"
 
   // Modals
   const [show86Modal, setShow86Modal] = useState(false);
@@ -453,12 +454,44 @@ export default function KitchenPanel({ user, onLogout }) {
         </div>
       )}
 
+      {/* Mobile Column Bar (Tablets & Phones) */}
+      <div className="kds-mobile-col-bar">
+        <button
+          type="button"
+          className={`kds-mobile-col-btn ${mobileCol === "all" ? "active" : ""}`}
+          onClick={() => setMobileCol("all")}
+        >
+          All ({filteredNew.length + filteredPreparing.length + filteredReady.length})
+        </button>
+        <button
+          type="button"
+          className={`kds-mobile-col-btn ${mobileCol === "new" ? "active" : ""}`}
+          onClick={() => setMobileCol("new")}
+        >
+          1. New ({filteredNew.length})
+        </button>
+        <button
+          type="button"
+          className={`kds-mobile-col-btn ${mobileCol === "preparing" ? "active" : ""}`}
+          onClick={() => setMobileCol("preparing")}
+        >
+          2. Prep ({filteredPreparing.length})
+        </button>
+        <button
+          type="button"
+          className={`kds-mobile-col-btn ${mobileCol === "ready" ? "active" : ""}`}
+          onClick={() => setMobileCol("ready")}
+        >
+          3. Ready ({filteredReady.length})
+        </button>
+      </div>
+
       {/* 3 Columns Queue Layout */}
       <main className="kds-columns-grid">
         {/* Column 1: NEW ORDERS */}
-        <section className="kds-column col-new">
+        <section className={`kds-column col-new ${mobileCol !== "all" && mobileCol !== "new" ? "hide-on-mobile" : ""}`}>
           <div className="kds-column-header">
-            <span className="kds-column-title" style={{ color: "#38bdf8" }}>
+            <span className="kds-column-title" style={{ color: "#d9a441" }}>
               1. NEW ORDERS
             </span>
             <span className="kds-column-count">{filteredNew.length}</span>
@@ -473,9 +506,9 @@ export default function KitchenPanel({ user, onLogout }) {
         </section>
 
         {/* Column 2: PREPARING */}
-        <section className="kds-column col-preparing">
+        <section className={`kds-column col-preparing ${mobileCol !== "all" && mobileCol !== "preparing" ? "hide-on-mobile" : ""}`}>
           <div className="kds-column-header">
-            <span className="kds-column-title" style={{ color: "#fbbf24" }}>
+            <span className="kds-column-title" style={{ color: "#38bdf8" }}>
               2. PREPARING
             </span>
             <span className="kds-column-count">{filteredPreparing.length}</span>
@@ -490,7 +523,7 @@ export default function KitchenPanel({ user, onLogout }) {
         </section>
 
         {/* Column 3: READY */}
-        <section className="kds-column col-ready">
+        <section className={`kds-column col-ready ${mobileCol !== "all" && mobileCol !== "ready" ? "hide-on-mobile" : ""}`}>
           <div className="kds-column-header">
             <span className="kds-column-title" style={{ color: "#34d399" }}>
               3. READY FOR PICKUP
