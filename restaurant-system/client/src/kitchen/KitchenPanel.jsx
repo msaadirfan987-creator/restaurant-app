@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { apiUrl } from "../config/api.js";
+import { apiUrl, authHeaders } from "../config/api.js";
 import "./kitchen.css";
 
 function elapsedMinutes(createdAt) {
@@ -62,10 +62,16 @@ export default function KitchenPanel({ user, onLogout }) {
       try {
         const res = await fetch(apiUrl("/api/panels/kitchen"), {
           credentials: "include",
-          headers: { "X-Requested-With": "XMLHttpRequest" },
+          headers: authHeaders(),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to load kitchen queue.");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (res.status === 401 && onLogout) {
+            onLogout();
+            return;
+          }
+          throw new Error(data.message || "Failed to load kitchen queue.");
+        }
 
         const fetchedNew = data.newOrders || [];
         setNewOrders(fetchedNew);
@@ -101,10 +107,7 @@ export default function KitchenPanel({ user, onLogout }) {
       const res = await fetch(apiUrl(`/api/panels/kitchen/${orderId}/status`), {
         method: "PATCH",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-        },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
@@ -129,10 +132,7 @@ export default function KitchenPanel({ user, onLogout }) {
       const res = await fetch(apiUrl(`/api/panels/kitchen/${rejectOrder._id}/reject`), {
         method: "PATCH",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-        },
+        headers: authHeaders({ "Content-Type": "application/json" }),
         body: JSON.stringify({ reason: rejectReason }),
       });
       const data = await res.json();
@@ -154,7 +154,7 @@ export default function KitchenPanel({ user, onLogout }) {
     try {
       const res = await fetch(apiUrl("/api/panels/kitchen/products"), {
         credentials: "include",
-        headers: { "X-Requested-With": "XMLHttpRequest" },
+        headers: authHeaders(),
       });
       const data = await res.json();
       if (res.ok && data.products) setProductsList(data.products);
@@ -169,7 +169,7 @@ export default function KitchenPanel({ user, onLogout }) {
       const res = await fetch(apiUrl(`/api/panels/kitchen/products/${productId}/toggle-86`), {
         method: "PATCH",
         credentials: "include",
-        headers: { "X-Requested-With": "XMLHttpRequest" },
+        headers: authHeaders(),
       });
       const data = await res.json();
       if (res.ok) {
@@ -188,7 +188,7 @@ export default function KitchenPanel({ user, onLogout }) {
     try {
       const res = await fetch(apiUrl("/api/panels/kitchen/completed-today"), {
         credentials: "include",
-        headers: { "X-Requested-With": "XMLHttpRequest" },
+        headers: authHeaders(),
       });
       const data = await res.json();
       if (res.ok && data.orders) setCompletedOrders(data.orders);

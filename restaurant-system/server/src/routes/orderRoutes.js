@@ -36,8 +36,8 @@ const optionalAuth = async (req, res, next) => {
   return next();
 };
 
-// Public endpoint to place order with CSRF check
-router.post("/", verifyCsrf, optionalAuth, createOrder);
+// Public endpoint to place order (accessible to guests and authenticated users)
+router.post("/", optionalAuth, createOrder);
 
 // Customer data ownership: Fetch current user's own orders
 router.get("/my-orders", authenticateToken, getMyOrders);

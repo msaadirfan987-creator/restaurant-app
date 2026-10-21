@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { apiUrl } from "../config/api.js";
+import { apiUrl, authHeaders } from "../config/api.js";
 import "./waiter.css";
 
 export default function WaiterPanel({ user, onLogout }) {
@@ -51,10 +51,16 @@ export default function WaiterPanel({ user, onLogout }) {
       try {
         const res = await fetch(apiUrl("/api/panels/waiter"), {
           credentials: "include",
-          headers: { "X-Requested-With": "XMLHttpRequest" },
+          headers: authHeaders(),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message || "Failed to load waiter data.");
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          if (res.status === 401 && onLogout) {
+            onLogout();
+            return;
+          }
+          throw new Error(data.message || "Failed to load waiter data.");
+        }
 
         setTables(data.tables || []);
         setReadyOrders(data.readyOrders || []);
@@ -190,7 +196,7 @@ export default function WaiterPanel({ user, onLogout }) {
       const res = await fetch(apiUrl(`/api/panels/waiter/order/${item.orderId}/item/${item.itemIndex}`), {
         method: "DELETE",
         credentials: "include",
-        headers: { "X-Requested-With": "XMLHttpRequest" },
+        headers: authHeaders(),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to remove item.");
@@ -223,10 +229,7 @@ export default function WaiterPanel({ user, onLogout }) {
         const res = await fetch(apiUrl(`/api/panels/waiter/order/${activeTable.activeOrder._id}/add-items`), {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-          },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             items: newItems,
             clientKey,
@@ -239,10 +242,7 @@ export default function WaiterPanel({ user, onLogout }) {
         const res = await fetch(apiUrl("/api/panels/waiter/order"), {
           method: "POST",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Requested-With": "XMLHttpRequest",
-          },
+          headers: authHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             tableId: activeTable._id,
             guestCount: Math.max(1, Number(guestCount) || 1),
@@ -271,10 +271,7 @@ export default function WaiterPanel({ user, onLogout }) {
       const res = await fetch(apiUrl(`/api/panels/waiter/${orderId}/complete`), {
         method: "PATCH",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-        },
+        headers: authHeaders({ "Content-Type": "application/json" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to mark order as served.");
@@ -295,10 +292,7 @@ export default function WaiterPanel({ user, onLogout }) {
       const res = await fetch(apiUrl(`/api/panels/waiter/order/${orderId}/bill-request`), {
         method: "PATCH",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-        },
+        headers: authHeaders({ "Content-Type": "application/json" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || "Failed to request bill.");

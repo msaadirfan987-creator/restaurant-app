@@ -120,7 +120,15 @@ export default function App() {
       credentials: "include",
       headers: authHeaders(),
     })
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res.ok) return res.json();
+        if (res.status === 401) {
+          setCurrentUser(null);
+          setAuthToken(null);
+          localStorage.removeItem("bh_user");
+        }
+        return null;
+      })
       .then((data) => {
         if (data?.user) {
           setCurrentUser(data.user);

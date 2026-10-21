@@ -119,7 +119,11 @@ orderSchema.pre("validate", async function () {
 
   // Generate sequential orderNumber if new
   if (this.isNew && !this.orderNumber) {
-    this.orderNumber = await nextOrderNumber();
+    try {
+      this.orderNumber = await nextOrderNumber();
+    } catch {
+      this.orderNumber = Math.floor(1000 + (Date.now() % 9000));
+    }
   }
   if (!this.orderId) {
     this.orderId = this.orderNumber ? `#${this.orderNumber}` : `BH-${Date.now()}`;

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { apiUrl } from "../config/api.js";
+import { apiUrl, authHeaders } from "../config/api.js";
 
 /**
  * CartDrawer.jsx — Full Slide-Out Cart Drawer & Checkout Modal
@@ -134,13 +134,16 @@ export default function CartDrawer({
       return;
     }
     setIsSubmitting(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+
     try {
       const res = await fetch(apiUrl("/api/orders"), {
         method: "POST",
-        headers: {
+        signal: controller.signal,
+        headers: authHeaders({
           "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-        },
+        }),
         credentials: "include",
         body: JSON.stringify({
           customerName: formData.name,
@@ -163,6 +166,7 @@ export default function CartDrawer({
         }),
       });
 
+      clearTimeout(timer);
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) {
@@ -173,7 +177,12 @@ export default function CartDrawer({
       setStep("success");
       onClearCart?.();
     } catch (err) {
-      alert(err.message || "Could not save your order. Please try again.");
+      clearTimeout(timer);
+      if (err.name === "AbortError") {
+        alert("Server took too long to respond. Please check your internet connection or try again.");
+      } else {
+        alert(err.message || "Could not save your order. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }
