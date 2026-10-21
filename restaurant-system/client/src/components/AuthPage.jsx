@@ -37,15 +37,14 @@ const COLORS = {
 const ART =
   "https://images.unsplash.com/photo-1607013251379-e6eecfffe234?auto=format&fit=crop&w=1400&q=80";
 
-import { apiUrl } from "../config/api.js";
+import { apiUrl, setAuthToken, authHeaders } from "../config/api.js";
 
 async function post(url, body) {
   const res = await fetch(apiUrl(url), {
     method: "POST",
-    headers: {
+    headers: authHeaders({
       "Content-Type": "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-    },
+    }),
     credentials: "include",
     body: JSON.stringify(body),
   });
@@ -53,7 +52,10 @@ async function post(url, body) {
   if (!res.ok) {
     throw new Error(data.message || "Authentication failed. Please check your credentials.");
   }
-  return data.user || data;
+  if (data.token) {
+    setAuthToken(data.token);
+  }
+  return data.user ? { ...data.user, token: data.token } : data;
 }
 
 const emailOk = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);

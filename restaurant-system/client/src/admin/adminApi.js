@@ -2,14 +2,12 @@
 // Uses credentials: "include" so HttpOnly cookies are attached automatically.
 // Enforces CSRF defense header on all requests.
 
-import { apiUrl } from "../config/api.js";
+import { apiUrl, authHeaders, setAuthToken } from "../config/api.js";
 
 async function request(url, { method = "GET", body, isForm = false } = {}) {
   let res;
   try {
-    const headers = {
-      "X-Requested-With": "XMLHttpRequest",
-    };
+    const headers = authHeaders();
     if (body && !isForm) {
       headers["Content-Type"] = "application/json";
     }
@@ -38,9 +36,18 @@ async function request(url, { method = "GET", body, isForm = false } = {}) {
 
 export const adminApi = {
   // Session & Authentication
-  login: (email, password) =>
-    request("/api/admin/login", { method: "POST", body: { email, password } }),
-  logout: () => request("/api/admin/logout", { method: "POST" }),
+  login: async (email, password) => {
+    const data = await request("/api/admin/login", { method: "POST", body: { email, password } });
+    if (data?.token) setAuthToken(data.token);
+    return data;
+  },
+  logout: async () => {
+    try {
+      await request("/api/admin/logout", { method: "POST" });
+    } finally {
+      setAuthToken(null);
+    }
+  },
   me: () => request("/api/admin/me"),
 
   // File Upload (with client-side security checks)

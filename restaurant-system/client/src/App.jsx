@@ -15,7 +15,7 @@ import AdminApp from "./admin/AdminApp";
 import CashierApp from "./cashier/CashierApp";
 import KitchenPanel from "./kitchen/KitchenPanel";
 import WaiterPanel from "./waiter/WaiterPanel";
-import { apiUrl } from "./config/api.js";
+import { apiUrl, authHeaders, setAuthToken } from "./config/api.js";
 
 function StaffGuard({ title, requiredRoles, currentUser, onOpenLogin, onGoHome, children }) {
   if (!currentUser) {
@@ -114,9 +114,12 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  // Synchronize active session with backend HttpOnly cookie on page load
+  // Synchronize active session with backend HttpOnly cookie or Bearer token on page load
   useEffect(() => {
-    fetch(apiUrl("/api/auth/me"), { credentials: "include" })
+    fetch(apiUrl("/api/auth/me"), {
+      credentials: "include",
+      headers: authHeaders(),
+    })
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user) {
@@ -189,15 +192,14 @@ export default function App() {
     try {
       await fetch(apiUrl("/api/auth/logout"), {
         method: "POST",
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-        },
+        headers: authHeaders(),
         credentials: "include",
       });
     } catch {
       // ignore network errors on logout
     }
 
+    setAuthToken(null);
     setCurrentUser(null);
     localStorage.removeItem("bh_user");
 

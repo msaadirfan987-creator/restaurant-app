@@ -5,11 +5,16 @@ import User from "../models/user.js";
 // Authenticate user via HttpOnly cookie (admin_session or token) or Authorization Bearer header
 export const authenticateToken = async (req, res, next) => {
   try {
-    let token = req.cookies?.admin_session || req.cookies?.token;
+    let token = null;
 
-    // Check Authorization header fallback
-    if (!token && req.headers.authorization?.startsWith("Bearer ")) {
-      token = req.headers.authorization.split(" ")[1];
+    // Check Authorization header first (most reliable on cross-origin Vercel deployment)
+    if (req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1]?.trim();
+    }
+
+    // Fallback to HttpOnly cookies
+    if (!token) {
+      token = req.cookies?.admin_session || req.cookies?.token;
     }
 
     if (!token) {

@@ -1,14 +1,12 @@
 // cashierApi.js — Secure Cashier API client
 // Automatically sends credentials: "include" and X-Requested-With header.
 
-import { apiUrl } from "../config/api.js";
+import { apiUrl, authHeaders } from "../config/api.js";
 
 async function request(url, { method = "GET", body } = {}) {
   let res;
   try {
-    const headers = {
-      "X-Requested-With": "XMLHttpRequest",
-    };
+    const headers = authHeaders();
     if (body) {
       headers["Content-Type"] = "application/json";
     }
